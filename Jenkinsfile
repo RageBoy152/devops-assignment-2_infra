@@ -17,12 +17,12 @@ pipeline {
   stages {
     stage('Provision Key & Security Group') {
 			steps {
-				sh "ansible-playbook provision_key_security_group.yml"
+				sh "ansible-playbook playbooks/provision_key_security_group.yml"
 			}
 		}
     stage('Provision EC2 Instance') {
 			steps {
-				sh "ansible-playbook provision_container.yml"
+				sh "ansible-playbook playbooks/provision_container.yml"
 			}
 		}
   }
