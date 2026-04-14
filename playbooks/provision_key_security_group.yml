@@ -1,25 +1,41 @@
 - name: Provision SSH key and Security Groups for Staging EC2 Instance
   hosts: localhost
   connection: local
+  vars:
+    aws_region: us-east-1
+    ec2_key_name: devops-assignment-2-prod-key
+    pem_path: "{{ playbook_dir }}/devops-assignment-2-prod-key.pem"
   tasks:
-  - name: Create EC2 SSH key if it doesn't exist
+  - name: Remove local PEM file before regenerating key
+    file:
+      path: "{{ pem_path }}"
+      state: absent
+
+  - name: Remove EC2 SSH key if it already exists
     ec2_key:
-      name: "devops-assignment-2-prod-key"
-      region: us-east-1
+      name: "{{ ec2_key_name }}"
+      region: "{{ aws_region }}"
+      state: absent
+
+  - name: Create EC2 SSH key
+    ec2_key:
+      name: "{{ ec2_key_name }}"
+      region: "{{ aws_region }}"
     register: ec2_key
 
-  - name: Save EC2 SSH key to file
+  - name: Save EC2 SSH key to playbook directory
     copy:
       content: "{{ ec2_key.key.private_key }}"
-      dest: devops-assignment-2-prod-key.pem
+      dest: "{{ pem_path }}"
       mode: 0600
+    no_log: true
 
 
   - name: Create Security Group for app instance
     ec2_group:
       name: "devops-assignment-2-prod-sg"
       description: EC2 VPC Security Group for App Servers
-      region: us-east-1
+      region: "{{ aws_region }}"
       rules:
       - proto: tcp
         ports: 80
