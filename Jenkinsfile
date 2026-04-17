@@ -22,7 +22,18 @@ pipeline {
 		}
     stage('Deploy Container') {
 			steps {
-				sh "ansible-playbook playbooks/deploy_container.yml"
+				withCredentials([usernamePassword(
+					credentialsId: 'dockerhub-credentials',
+					usernameVariable: 'DOCKERHUB_USERNAME',
+					passwordVariable: 'DOCKERHUB_PASSWORD'
+				)]) {
+					withEnv([
+						"IMAGE_REPOSITORY=rageboy152/devops-assignment-2",
+						"IMAGE_TAG=${params.IMAGE_TAG}"
+					]) {
+						sh "ansible-playbook playbooks/deploy_container.yml"
+					}
+				}
 			}
 		}
   }

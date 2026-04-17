@@ -29,3 +29,53 @@
       when: item.public_ip_address is defined
 
 # MARK: Deploy to Prod
+- name: Stage 4 - Deploy production application container
+  hosts: ec2_prod
+  become: true
+  vars:
+    ansible_ssh_private_key_file: devops-assignment-2-prod-key.pem
+    remote_ec2_user: ubuntu
+    dockerhub_username: "{{ lookup('ansible.builtin.env', 'DOCKERHUB_USERNAME') }}"
+    dockerhub_password: "{{ lookup('ansible.builtin.env', 'DOCKERHUB_PASSWORD') }}"
+    image_repository: "{{ lookup('ansible.builtin.env', 'IMAGE_REPOSITORY') }}"
+    image_tag: "{{ lookup('ansible.builtin.env', 'IMAGE_TAG') }}"
+    container_name: devops-assignment-2-prod
+  remote_user: "{{ remote_ec2_user }}"
+
+  tasks:
+    - name: Validate required deployment variables
+      assert:
+        that:
+          - dockerhub_username | length > 0
+          - dockerhub_password | length > 0
+          - image_repository | length > 0
+          - image_tag | length > 0
+        fail_msg: "Missing Docker Hub creds or image variables (DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD, IMAGE_REPOSITORY, IMAGE_TAG)."
+
+    - name: Build full image reference
+      set_fact:
+        image_ref: "{{ image_repository }}:{{ image_tag }}"
+
+    - name: Log in to Docker Hub
+      shell: |
+        set -o pipefail
+        echo "{{ dockerhub_password }}" | docker login -u "{{ dockerhub_username }}" --password-stdin
+      args:
+        executable: /bin/bash
+      no_log: true
+
+    - name: Pull requested image
+      shell: "docker pull {{ image_ref }}"
+
+    - name: Stop existing app container if present
+      shell: "docker rm -f {{ container_name }}"
+      failed_when: false
+      changed_when: true
+
+    - name: Run production app container
+      shell: >
+        docker run -d
+        --name {{ container_name }}
+        --restart unless-stopped
+        -p 80:80
+        {{ image_ref }}
