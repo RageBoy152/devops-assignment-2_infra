@@ -89,3 +89,33 @@
         --restart unless-stopped
         -p 80:80
         {{ image_ref }}
+
+# MARK: Health Check
+- name: Stage 5 - Automated health check
+  hosts: localhost
+  gather_facts: false
+  vars:
+    build_number: "{{ lookup('ansible.builtin.env', 'BUILD_NUMBER') }}"
+    instance_name: "DevOpsAssignment2_Prod_{{ build_number }}"
+    region: us-east-1
+
+  tasks:
+    - name: Gather running prod instance for this build
+      ec2_instance_info:
+        region: "{{ region }}"
+        filters:
+          instance-state-name: running
+          tag:Name: "{{ instance_name }}"
+      register: ec2_health_target
+
+    - name: Fail if no running prod instance was found for health check
+      fail:
+        msg: "No running production instance found for {{ instance_name }}."
+      when: ec2_health_target.instances | length == 0
+
+    - name: Run HTTP health check with curl
+      shell: "curl -fsS --max-time 10 http://{{ item.public_ip_address }}/ > /dev/null"
+      loop: "{{ ec2_health_target.instances }}"
+      loop_control:
+        label: "{{ item.public_ip_address }}"
+      when: item.public_ip_address is defined
