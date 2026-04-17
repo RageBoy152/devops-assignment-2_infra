@@ -1,0 +1,31 @@
+# Check production instance state
+- name: Stage 3 - Ensure prod instance is running and inventory is updated
+  hosts: localhost
+  gather_facts: false
+  vars:
+    instance_name: DevOpsAssignment2_Prod
+    region: us-east-1
+    group: ec2_prod
+
+  tasks:
+    - name: Gather facts to check if the production instance already exists
+      ec2_instance_info:
+        region: "{{ region }}"
+        filters:
+          instance-state-name: running
+          tag:Name: "{{ instance_name }}"
+      register: ec2_exists
+
+    - name: Fail if no running instances are found
+      fail:
+        msg: "No running production instances found. Please provision the production environment."
+      when: ec2_exists.instances | length == 0
+
+    - name: Update inventory with dynamic public IPs
+      add_host:
+        name: "{{ item.public_ip_address }}"
+        groups: "{{ group }}"
+      loop: "{{ ec2_exists.instances }}"
+      when: item.public_ip_address is defined
+
+# MARK: Deploy to Prod
