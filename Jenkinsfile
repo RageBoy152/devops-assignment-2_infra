@@ -23,7 +23,7 @@ pipeline {
     stage('Deploy Container') {
 			steps {
 				withCredentials([usernamePassword(
-					credentialsId: 'dockerhub-credentials',
+					credentialsId: 'dockerhub-login',
 					usernameVariable: 'DOCKERHUB_USERNAME',
 					passwordVariable: 'DOCKERHUB_PASSWORD'
 				)]) {
