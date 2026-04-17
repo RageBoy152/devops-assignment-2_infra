@@ -6,7 +6,7 @@
     region: "us-east-1"
     image_id: "ami-0866a3c8686eaeeba"
     instance_type: "t2.small"
-    security_group: "devops-assignmentg-2-prod-sg"
+    security_group: "devops-assignment-2-prod-sg"
     key_name: "devops-assignment-2-prod-key"
     instance_name: "DevOpsAssignment2_Prod"
 
