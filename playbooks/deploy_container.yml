@@ -3,11 +3,19 @@
   hosts: localhost
   gather_facts: false
   vars:
-    instance_name: DevOpsAssignment2_Prod
+    build_number: "{{ lookup('ansible.builtin.env', 'BUILD_NUMBER') }}"
+    key_name: "devops-assignment-2-prod-key-{{ build_number }}"
+    instance_name: "DevOpsAssignment2_Prod_{{ build_number }}"
     region: us-east-1
     group: ec2_prod
 
   tasks:
+    - name: Validate required build number
+      assert:
+        that:
+          - build_number | length > 0
+        fail_msg: "BUILD_NUMBER is required (expected from Jenkins environment)."
+
     - name: Gather facts to check if the production instance already exists
       ec2_instance_info:
         region: "{{ region }}"
@@ -25,6 +33,9 @@
       add_host:
         name: "{{ item.public_ip_address }}"
         groups: "{{ group }}"
+        ansible_user: ubuntu
+        ansible_ssh_private_key_file: "{{ playbook_dir }}/{{ key_name }}.pem"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
       loop: "{{ ec2_exists.instances }}"
       when: item.public_ip_address is defined
 
@@ -33,7 +44,6 @@
   hosts: ec2_prod
   become: true
   vars:
-    ansible_ssh_private_key_file: playbooks/devops-assignment-2-prod-key.pem
     remote_ec2_user: ubuntu
     dockerhub_username: "{{ lookup('ansible.builtin.env', 'DOCKERHUB_USERNAME') }}"
     dockerhub_password: "{{ lookup('ansible.builtin.env', 'DOCKERHUB_PASSWORD') }}"
